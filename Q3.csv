@@ -1,0 +1,15 @@
+title,gender,avg(a.salary)
+"Senior Engineer",M,70869.9085
+Staff,F,67282.4599
+"Senior Staff",M,80735.4795
+"Senior Engineer",F,70753.8341
+"Senior Staff",F,80662.9816
+Engineer,F,59617.3549
+Engineer,M,59592.9683
+Staff,M,67362.1754
+"Assistant Engineer",F,57495.9861
+"Technique Leader",F,67369.0734
+"Technique Leader",M,67599.6710
+"Assistant Engineer",M,57197.9674
+Manager,M,79350.6000
+Manager,F,75690.0000
