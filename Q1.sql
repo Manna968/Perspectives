@@ -8,10 +8,6 @@ create temporary table employees.end_employee_date
 	from employees.employees e join employees.titles t on e.emp_no = t.emp_no
 	group by e.emp_no;	
 
-create temporary table employees.current_employee_title
-	select e.emp_no, e.first_name, e.last_name, t.title as end_title, t.to_date as end_date from 
-	employees.employees e join employees.titles t on e.emp_no = t.emp_no
-	where t.to_date = "9999-01-01";
     
 create temporary table employees.end_employee_title
 	select e.emp_no, t.title as end_title from 
