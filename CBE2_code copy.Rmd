@@ -1,0 +1,1234 @@
+---
+title: "Technical Appendix"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+
+
+```{r libraries, message = FALSE, error=FALSE, warning=FALSE}
+library(cmu.textstat)
+library(tidyverse)
+library(quanteda)
+library(quanteda.textstats)
+library(udpipe)
+library(future.apply)
+library(pdftools)
+library(dplyr)
+```
+
+
+```{r more_libraries, message = FALSE, error=FALSE, warning=FALSE}
+library(udpipe)
+library(future.apply)
+udpipe_download_model(language = "english-ewt")
+```
+
+
+```{r}
+files_list <- list.files("/Users/zhaoxiangman/Desktop/ya_corpus",
+                         full.names = T, pattern = "*.txt")
+
+files_list_Rowling <- files_list[str_detect(files_list, "Rowling")]
+files_list_Meyer <- files_list[str_detect(files_list, "Meyer")]
+files_list_Roth <- files_list[str_detect(files_list, "Roth")]
+files_list_Collins <- files_list[str_detect(files_list, "Collins")]
+```
+
+
+
+```{r}
+set.seed(123)
+ya_rowling <- readtext::readtext(files_list_Rowling)
+ya_split_rowling <- split(ya_rowling, seq(1, nrow(ya_rowling), by = 2))
+ya_meyer <- readtext::readtext(files_list_Meyer)
+ya_split_meyer <- split(ya_meyer, seq(1, nrow(ya_meyer), by = 2))
+
+ya_collins <- readtext::readtext(files_list_Collins)
+ya_split_collins <- split(ya_collins, seq(1, nrow(ya_collins), by = 2))
+
+```
+
+
+
+
+## Create a simple annotation function
+
+```{r}
+ncores <- 4L
+plan(multisession, workers = ncores)
+
+annotate_splits <- function(corpus_text) {
+  ud_model <- udpipe_load_model("english-ewt-ud-2.5-191206.udpipe")
+  x <- data.table::as.data.table(udpipe_annotate(ud_model, x = corpus_text$text,
+                                                 doc_id = corpus_text$doc_id))
+  return(x)
+}
+
+```
+
+
+
+```{r}
+# Annotations for young adult books
+annotation <- future_lapply(ya_split_rowling, annotate_splits, future.seed = T)
+annotation <- data.table::rbindlist(annotation)
+
+annotation <- annotation %>%
+  select(doc_id, sentence_id, token_id, token, lemma, upos, xpos, head_token_id, dep_rel) %>%
+  rename(pos = upos, tag = xpos)
+
+```
+
+
+
+
+
+```{r}
+#Using pdftools to read text
+library(stringr)
+gatsby <- pdftools::pdf_text("/Users/zhaoxiangman/Desktop/the-great-gatsby.pdf") %>%
+  paste(sep = " ") %>%
+  stringr::str_replace_all(fixed("\n"), " ") %>%
+  stringr::str_replace_all(fixed("\r"), " ") %>%
+  stringr::str_replace_all(fixed("\t"), " ") %>%
+  stringr::str_replace_all(fixed("\""), " ") %>%
+  paste(sep = " ", collapse = " ") %>%
+  stringr::str_squish() %>%
+  stringr::str_replace_all("- ", "") 
+ud_model <- udpipe_load_model("english-ewt-ud-2.5-191206.udpipe")
+gatsby <- udpipe_annotate(ud_model, x = gatsby)
+x <- as.data.frame(gatsby)
+```
+
+```{r}
+# Annotating gatsby
+annotation_gatsby <- x %>%
+  select(doc_id, sentence_id, token_id, token, lemma, upos, xpos, head_token_id, dep_rel) %>%
+  rename(pos = upos, tag = xpos) %>% mutate(doc_id = "gatsby")
+
+```
+
+```{r}
+# Reading text in Jane Eyre and annotation
+jane <- pdftools::pdf_text("/Users/zhaoxiangman/Desktop/jane-eyre.pdf") %>%
+  paste(sep = " ") %>%
+  stringr::str_replace_all(fixed("\n"), " ") %>%
+  stringr::str_replace_all(fixed("\r"), " ") %>%
+  stringr::str_replace_all(fixed("\t"), " ") %>%
+  stringr::str_replace_all(fixed("\""), " ") %>%
+  paste(sep = " ", collapse = " ") %>%
+  stringr::str_squish() %>%
+  stringr::str_replace_all("- ", "") 
+ud_model <- udpipe_load_model("english-ewt-ud-2.5-191206.udpipe")
+jane <- udpipe_annotate(ud_model, x = jane)
+y <- as.data.frame(jane)
+```
+
+```{r}
+# annotating Jane Eyre
+annotation_jane <- y %>%
+  select(doc_id, sentence_id, token_id, token, lemma, upos, xpos, head_token_id, dep_rel) %>%
+  rename(pos = upos, tag = xpos) %>% mutate(doc_id = "jane")
+```
+
+```{r}
+# Reading text in pride and prejudice
+pride <- pdftools::pdf_text("/Users/zhaoxiangman/Desktop/pride-and-prejudice.pdf") %>%
+  paste(sep = " ") %>%
+  stringr::str_replace_all(fixed("\n"), " ") %>%
+  stringr::str_replace_all(fixed("\r"), " ") %>%
+  stringr::str_replace_all(fixed("\t"), " ") %>%
+  stringr::str_replace_all(fixed("\""), " ") %>%
+  paste(sep = " ", collapse = " ") %>%
+  stringr::str_squish() %>%
+  stringr::str_replace_all("- ", "") 
+
+pride <- udpipe_annotate(ud_model, x = pride)
+z <- as.data.frame(pride)
+```
+
+```{r}
+# Annotating pride and prejudice
+annotation_pride <- z %>%
+  select(doc_id, sentence_id, token_id, token, lemma, upos, xpos, head_token_id, dep_rel) %>%
+  rename(pos = upos, tag = xpos) %>% mutate(doc_id = "pride")
+```
+
+
+```{r}
+# Annotating twilight
+annotation2 <- future_lapply(ya_split_meyer, annotate_splits, future.seed = T)
+annotation2 <- data.table::rbindlist(annotation2)
+
+annotation2 <- annotation2 %>%
+  select(doc_id, sentence_id, token_id, token, lemma, upos, xpos, head_token_id, dep_rel) %>%
+  rename(pos = upos, tag = xpos)
+
+```
+
+
+```{r}
+# Annotating hinger games
+annotation3 <- future_lapply(ya_split_collins, annotate_splits, future.seed = T)
+annotation3 <- data.table::rbindlist(annotation3)
+
+annotation3 <- annotation3 %>%
+  select(doc_id, sentence_id, token_id, token, lemma, upos, xpos, head_token_id, dep_rel) %>%
+  rename(pos = upos, tag = xpos)
+```
+
+```{r}
+# keep formating annotations for young adult
+annotation1 <- structure(annotation, class = c("spacyr_parsed", "data.frame"))
+ya_tkns1 <- as.tokens(annotation1, include_pos = "tag", concatenator = "_")
+
+annotation2 <- structure(annotation2, class = c("spacyr_parsed", "data.frame"))
+ya_tkns2 <- as.tokens(annotation2, include_pos = "tag", concatenator = "_")
+
+annotation3 <- structure(annotation3, class = c("spacyr_parsed", "data.frame"))
+ya_tkns3 <- as.tokens(annotation3, include_pos = "tag", concatenator = "_")
+```
+
+
+```{r}
+# keep annotating for adults
+annotation_gatsby <- structure(annotation_gatsby, class = c("spacyr_parsed", "data.frame"))
+ya_tkns_gatsby <- as.tokens(annotation_gatsby, include_pos = "tag", concatenator = "_")
+
+annotation_jane <- structure(annotation_jane, class = c("spacyr_parsed", "data.frame"))
+ya_tkns_jane <- as.tokens(annotation_jane, include_pos = "tag", concatenator = "_")
+
+annotation_pride<- structure(annotation_pride, class = c("spacyr_parsed", "data.frame"))
+ya_tkns_pride <- as.tokens(annotation_pride, include_pos = "tag", concatenator = "_")
+```
+
+
+```{r}
+# generating dfm for harry potter
+doc_categories <- names(ya_tkns1) %>%
+  data.frame(author = .) %>%
+  mutate(author = str_extract(author, "^[A-Z][a-z]+"))
+
+docvars(ya_tkns1) <- doc_categories
+
+ya_dfm1 <- ya_tkns1 %>%
+  tokens_select("^.*[a-zA-Z0-9]+.*_[a-z]", 
+                selection = "keep", 
+                valuetype = "regex", case_insensitive = T) %>%
+  dfm()
+```
+
+```{r}
+# generating dfm for twilight
+doc_categories <- names(ya_tkns2) %>%
+  data.frame(author = .) %>%
+  mutate(author = str_extract(author, "^[A-Z][a-z]+"))
+
+docvars(ya_tkns2) <- doc_categories
+
+ya_dfm2 <- ya_tkns2 %>%
+  tokens_select("^.*[a-zA-Z0-9]+.*_[a-z]", 
+                selection = "keep", 
+                valuetype = "regex", case_insensitive = T) %>%
+  dfm()
+```
+
+
+
+```{r}
+# generating dfm for the hunger games
+doc_categories <- names(ya_tkns3) %>%
+  data.frame(author = .) %>%
+  mutate(author = str_extract(author, "^[A-Z][a-z]+"))
+
+docvars(ya_tkns3) <- doc_categories
+
+ya_dfm3 <- ya_tkns3 %>%
+  tokens_select("^.*[a-zA-Z0-9]+.*_[a-z]", 
+                selection = "keep", 
+                valuetype = "regex", case_insensitive = T) %>%
+  dfm()
+```
+
+
+
+```{r}
+# generating dfm for gatsby
+doc_categories <- names(ya_tkns_gatsby) %>%
+  data.frame(author = .) %>%
+  mutate(author = "gatsby")
+
+docvars(ya_tkns_gatsby) <- doc_categories
+
+ya_dfm_gatsby <- ya_tkns_gatsby %>%
+  tokens_select("^.*[a-zA-Z0-9]+.*_[a-z]", 
+                selection = "keep", 
+                valuetype = "regex", case_insensitive = T) %>%
+  dfm()
+```
+
+```{r}
+# generating dfm for jane eyre
+doc_categories <- names(ya_tkns_jane) %>%
+  data.frame(author = .) %>%
+  mutate(author = "jane")
+
+docvars(ya_tkns_jane) <- doc_categories
+
+ya_dfm_jane <- ya_tkns_jane %>%
+  tokens_select("^.*[a-zA-Z0-9]+.*_[a-z]", 
+                selection = "keep", 
+                valuetype = "regex", case_insensitive = T) %>%
+  dfm()
+```
+
+
+```{r}
+# generating dfm for pride and prejudice
+doc_categories <- names(ya_tkns_pride) %>%
+  data.frame(author = .) %>%
+  mutate(author = "pride")
+
+docvars(ya_tkns_pride) <- doc_categories
+
+ya_dfm_pride <- ya_tkns_pride %>%
+  tokens_select("^.*[a-zA-Z0-9]+.*_[a-z]", 
+                selection = "keep", 
+                valuetype = "regex", case_insensitive = T) %>%
+  dfm()
+```
+
+
+```{r count_table, echo=FALSE}
+# building composition table for harry potter
+corpus_comp <- ntoken(ya_dfm1) %>% 
+  data.frame(Tokens = .) %>%
+  rownames_to_column("Author") %>%
+  mutate(Author = str_extract(Author, "^[A-Z][a-z]+")) %>%
+  group_by(Author) %>%
+  summarize(Texts = n(),
+    Tokens = sum(Tokens)) %>%
+  janitor::adorn_totals()
+
+corpus_comp
+```
+
+
+```{r}
+# composition table for gatsby
+corpus_comp_gatsby <- ntoken(ya_dfm_gatsby) %>% 
+  data.frame(Tokens = .) %>%
+  rownames_to_column("Author") %>%
+  mutate(Author = "gatsby") %>%
+  group_by(Author) %>%
+  summarize(Texts = n(),
+    Tokens = sum(Tokens)) %>%
+  janitor::adorn_totals()
+
+corpus_comp_gatsby
+```
+
+```{r}
+# composition table for jane eyre
+corpus_comp_jane <- ntoken(ya_dfm_jane) %>% 
+  data.frame(Tokens = .) %>%
+  rownames_to_column("Author") %>%
+  mutate(Author = "jane") %>%
+  group_by(Author) %>%
+  summarize(Texts = n(),
+    Tokens = sum(Tokens)) %>%
+  janitor::adorn_totals()
+
+corpus_comp_jane
+```
+
+```{r}
+# composition table for pride and prejudice
+corpus_comp_pride <- ntoken(ya_dfm_pride) %>% 
+  data.frame(Tokens = .) %>%
+  rownames_to_column("Author") %>%
+  mutate(Author = "pride") %>%
+  group_by(Author) %>%
+  summarize(Texts = n(),
+    Tokens = sum(Tokens)) %>%
+  janitor::adorn_totals()
+
+corpus_comp_pride
+```
+
+
+```{r}
+# composition table for twilight
+corpus_comp2 <- ntoken(ya_dfm2) %>% 
+  data.frame(Tokens = .) %>%
+  rownames_to_column("Author") %>%
+  mutate(Author = str_extract(Author, "^[A-Z][a-z]+")) %>%
+  group_by(Author) %>%
+  summarize(Texts = n(),
+    Tokens = sum(Tokens)) %>%
+  janitor::adorn_totals()
+
+corpus_comp2
+```
+
+
+```{r}
+# composition table for hunger games
+corpus_comp3 <- ntoken(ya_dfm3) %>% 
+  data.frame(Tokens = .) %>%
+  rownames_to_column("Author") %>%
+  mutate(Author = str_extract(Author, "^[A-Z][a-z]+")) %>%
+  group_by(Author) %>%
+  summarize(Texts = n(),
+    Tokens = sum(Tokens)) %>%
+  janitor::adorn_totals()
+
+corpus_comp3
+```
+
+```{r}
+# keyness table of nouns between young adult books
+ya_dfm1 <- ya_dfm1 %>% dfm_trim(min_termfreq = 1)
+ya_dfm2 <- ya_dfm2 %>% dfm_trim(min_termfreq = 1)
+ya_dfm3 <- ya_dfm3 %>% dfm_trim(min_termfreq = 1)
+ya_dfm_gatsby <- ya_dfm_gatsby %>% dfm_trim(min_termfreq = 1)
+ya_dfm_jane <- ya_dfm_jane %>% dfm_trim(min_termfreq = 1)
+ya_dfm_pride <- ya_dfm_pride %>% dfm_trim(min_termfreq = 1)
+
+hp_v_twi <- keyness_table(ya_dfm1, ya_dfm2) %>%
+  separate(col = Token, into = c("Token", "Tag"), sep = "_") %>%
+  filter(Tag == "nn" | Tag == "nns")
+
+hp_v_hun <-keyness_table(ya_dfm1, ya_dfm3) %>%
+  separate(col = Token, into = c("Token", "Tag"), sep = "_") %>%
+  filter(Tag == "nn" | Tag == "nns")
+
+hp_v_ga <- keyness_table(ya_dfm1, ya_dfm_gatsby) %>%
+  separate(col = Token, into = c("Token", "Tag"), sep = "_") %>%
+  filter(Tag == "nn" | Tag == "nns")
+
+hp_tbl <- hp_v_twi %>%
+  slice_max(LL, n=25) %>%
+  select(Token, LL, LR)
+
+twi_tbl <- hp_v_twi %>%
+  slice_min(LL, n=25) %>%
+  select(Token, LL, LR) %>%
+  mutate_if(is.numeric, abs)
+
+hun_tbl <-hp_v_hun %>%
+  slice_min(LL, n=25) %>%
+  select(Token, LL, LR) %>%
+  mutate_if(is.numeric, abs)
+
+
+```
+
+
+```{r}
+# frequency table of gatsby's use of nouns
+library(lattice)
+stats <- subset(x, upos %in% c("NOUN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring nouns", xlab = "Freq")
+```
+
+```{r}
+# frequency table of gatsby's use of adjs
+stats <- subset(x, upos %in% c("ADJ")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring adjectives", xlab = "Freq")
+```
+
+```{r}
+# frequency table of gatsby's use of pronouns
+stats <- subset(x, upos %in% c("PROPN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring nouns", xlab = "Freq")
+```
+
+```{r}
+# frequency table of gatsby's use of modal verbs
+stats <- subset(x, xpos %in% c("MD")) 
+stats$token <- tolower(stats$token)
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring modal verbs in the Great Gatsby", xlab = "Freq")
+```
+
+
+```{r}
+# frequency table of use of jane eyre's pronouns
+stats <- subset(y, upos %in% c("PROPN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring nouns", xlab = "Freq")
+```
+
+
+```{r}
+# frequency table of use of jane eyre's modal verbs
+stats <- subset(y, xpos %in% c("MD")) 
+stats$token <- tolower(stats$token)
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring modal verbs in Jane Eyre", xlab = "Freq")
+```
+
+```{r}
+# frequency table of jane eyre use of nouns
+stats <- subset(y, upos %in% c("NOUN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring nouns", xlab = "Freq")
+```
+
+```{r}
+# jane eyre use of adjs
+stats <- subset(y, upos %in% c("ADJ")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring adjectives", xlab = "Freq")
+```
+
+
+```{r}
+# pride and prejudice use of nouns
+stats <- subset(z, upos %in% c("NOUN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring nouns", xlab = "Freq")
+```
+
+```{r}
+# pride and prejudice use of modal verbs
+stats <- subset(z, xpos %in% c("MD")) 
+stats$token <- tolower(stats$token)
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring modal verbs in Pride and Prejudice", xlab = "Freq")
+```
+
+```{r}
+# pride and prejudice use of adjs
+stats <- subset(z, upos %in% c("ADJ")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring adjectives", xlab = "Freq")
+```
+
+```{r}
+# harry potter use of nouns
+stats <- subset(annotation1, pos %in% c("NOUN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring nouns", xlab = "Freq")
+```
+
+
+```{r}
+# harry potter use of modal verbs
+stats <- subset(annotation1, tag %in% c("MD")) 
+stats$token <- tolower(stats$token)
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring modal verbs in Harry Potter", xlab = "Freq")
+```
+
+```{r}
+# harry potter use of pronouns
+stats <- subset(annotation1, pos %in% c("PROPN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring pronouns", xlab = "Freq")
+```
+
+
+
+```{r}
+# harry potter use of adjs
+stats <- subset(annotation1, pos %in% c("ADJ")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring adj", xlab = "Freq")
+```
+
+```{r}
+# twilight use of nouns
+stats <- subset(annotation2, pos %in% c("NOUN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring nouns", xlab = "Freq")
+```
+
+```{r}
+# twilight frequency table of adjs
+stats <- subset(annotation2, pos %in% c("ADJ")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring adj", xlab = "Freq")
+```
+
+```{r}
+# twilight use of modal verbs
+stats <- subset(annotation2, tag %in% c("MD")) 
+stats$token <- tolower(stats$token)
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring modal verbs in Twilight", xlab = "Freq")
+```
+
+```{r}
+# twilight use of pronouns
+stats <- subset(annotation2, pos %in% c("PROPN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring pronouns", xlab = "Freq")
+```
+
+```{r}
+# hunger games use of nouns
+stats <- subset(annotation3, pos %in% c("NOUN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring nouns", xlab = "Freq")
+```
+
+```{r}
+# hunger games use of adjs
+stats <- subset(annotation3, pos %in% c("ADJ")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring ADJ", xlab = "Freq")
+```
+
+```{r}
+# hunger games use of pronouns
+stats <- subset(annotation3, pos %in% c("PROPN")) 
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring pronouns", xlab = "Freq")
+```
+
+```{r}
+# hunger games use of modal verbs
+stats <- subset(annotation3, tag %in% c("MD")) 
+stats$token <- tolower(stats$token)
+stats <- txt_freq(stats$token)
+stats$key <- factor(stats$key, levels = rev(stats$key))
+barchart(key ~ freq, data = head(stats, 20), col = "cadetblue", 
+         main = "Most occurring modal verbs in the Hunger Games", xlab = "Freq")
+```
+
+## RAKE
+
+
+```{r}
+# gatsby's use of phrase of adj + nouns
+stats <- keywords_rake(x = x, term = "lemma", group = "doc_id", 
+                       relevant = x$upos %in% c("NOUN", "ADJ"))
+stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
+barchart(key ~ rake, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
+         main = "Keywords identified by RAKE", 
+         xlab = "Rake")
+```
+
+```{r}
+# gatsby pmi collocation
+x$word <- tolower(x$token)
+stats <- keywords_collocation(x = x, term = "word", group = "doc_id")
+stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
+barchart(key ~ pmi, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
+         main = "Keywords identified by PMI Collocation", 
+         xlab = "PMI (Pointwise Mutual Information)")
+```
+
+```{r}
+# jane eyre combinations of adjs and nouns
+stats <- keywords_rake(x = y, term = "lemma", group = "doc_id", 
+                       relevant = y$upos %in% c("NOUN", "ADJ"))
+stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
+barchart(key ~ rake, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
+         main = "Keywords identified by RAKE", 
+         xlab = "Rake")
+```
+
+```{r}
+# jane eyre use of collocation
+y$word <- tolower(y$token)
+stats <- keywords_collocation(x = y, term = "word", group = "doc_id")
+stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
+barchart(key ~ pmi, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
+         main = "Keywords identified by PMI Collocation", 
+         xlab = "PMI (Pointwise Mutual Information)")
+```
+
+```{r}
+# pride and prejudice use of adj and nouns
+z$word <- tolower(z$token)
+stats <- keywords_collocation(x = z, term = "word", group = "doc_id")
+stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
+barchart(key ~ pmi, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
+         main = "Keywords identified by PMI Collocation", 
+         xlab = "PMI (Pointwise Mutual Information)")
+```
+
+
+```{r}
+# pride and prejudice use of adjs and nouns
+stats <- keywords_rake(x = z, term = "lemma", group = "doc_id", 
+                       relevant = z$upos %in% c("NOUN", "ADJ"))
+stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
+barchart(key ~ rake, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
+         main = "Keywords identified by RAKE", 
+         xlab = "Rake")
+```
+
+```{r}
+# harry potter use of collocation
+annotation1$word <- tolower(annotation1$token)
+stats <- keywords_collocation(x = annotation1, term = "word", group = "doc_id")
+stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
+barchart(key ~ pmi, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
+         main = "Keywords identified by PMI Collocation", 
+         xlab = "PMI (Pointwise Mutual Information)")
+```
+
+```{r}
+# harry potter use of adjs and nouns
+stats <- keywords_rake(x = annotation1, term = "lemma", group = "doc_id", 
+                       relevant = annotation1$pos %in% c("NOUN", "ADJ"))
+stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
+barchart(key ~ rake, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
+         main = "Keywords identified by RAKE", 
+         xlab = "Rake")
+```
+
+```{r}
+# twilight use of pmi collocation
+annotation2$word <- tolower(annotation2$token)
+stats <- keywords_collocation(x = annotation2, term = "word", group = "doc_id")
+stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
+barchart(key ~ pmi, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
+         main = "Keywords identified by PMI Collocation", 
+         xlab = "PMI (Pointwise Mutual Information)")
+```
+
+
+```{r}
+# hunger games use of collocation
+annotation3$word <- tolower(annotation3$token)
+stats <- keywords_collocation(x = annotation3, term = "word", group = "doc_id")
+stats$key <- factor(stats$keyword, levels = rev(stats$keyword))
+barchart(key ~ pmi, data = head(subset(stats, freq > 3), 20), col = "cadetblue", 
+         main = "Keywords identified by PMI Collocation", 
+         xlab = "PMI (Pointwise Mutual Information)")
+```
+
+
+```{r}
+# try to graph the connections between adjs and nouns
+cooc <- cooccurrence(x = subset(x, upos %in% c("NOUN", "ADJ")), 
+                     term = "lemma", 
+                     group = c("doc_id", "paragraph_id", "sentence_id"))
+```
+
+```{r}
+# plot gatsby coocurrences of nouns and adjs within sentences
+library(igraph)
+library(ggraph)
+library(ggplot2)
+wordnetwork <- head(cooc, 30)
+wordnetwork <- graph_from_data_frame(wordnetwork)
+ggraph(wordnetwork, layout = "fr") +
+  geom_edge_link(aes(width = cooc, edge_alpha = cooc), edge_colour = "pink") +
+  geom_node_text(aes(label = name), col = "darkgreen", size = 4) +
+  theme_graph(base_family = "Arial Narrow") +
+  theme(legend.position = "none") +
+  labs(title = "Cooccurrences within sentence", subtitle = "Nouns & Adjective")
+```
+
+```{r}
+# plot jane eyre coocurrences of nouns and adjs within sentences
+cooc <- cooccurrence(x = subset(y, upos %in% c("NOUN", "ADJ")), 
+                     term = "lemma", 
+                     group = c("doc_id", "paragraph_id", "sentence_id"))
+
+wordnetwork <- head(cooc, 30)
+wordnetwork <- graph_from_data_frame(wordnetwork)
+ggraph(wordnetwork, layout = "fr") +
+  geom_edge_link(aes(width = cooc, edge_alpha = cooc), edge_colour = "pink") +
+  geom_node_text(aes(label = name), col = "darkgreen", size = 4) +
+  theme_graph(base_family = "Arial Narrow") +
+  theme(legend.position = "none") +
+  labs(title = "Cooccurrences within sentence", subtitle = "Nouns & Adjective")
+```
+
+```{r}
+# plot pride and prejudice coocurrences of nouns and adjs within sentences
+cooc <- cooccurrence(x = subset(z, upos %in% c("NOUN", "ADJ")), 
+                     term = "lemma", 
+                     group = c("doc_id", "paragraph_id", "sentence_id"))
+
+wordnetwork <- head(cooc, 30)
+wordnetwork <- graph_from_data_frame(wordnetwork)
+ggraph(wordnetwork, layout = "fr") +
+  geom_edge_link(aes(width = cooc, edge_alpha = cooc), edge_colour = "pink") +
+  geom_node_text(aes(label = name), col = "darkgreen", size = 4) +
+  theme_graph(base_family = "Arial Narrow") +
+  theme(legend.position = "none") +
+  labs(title = "Cooccurrences within sentence", subtitle = "Nouns & Adjective")
+```
+
+```{r}
+# plot harry potter coocurrences of nouns and adjs within sentences
+cooc <- cooccurrence(x = subset(annotation1, pos %in% c("NOUN", "ADJ")), 
+                     term = "lemma", 
+                     group = c("doc_id", "sentence_id"))
+
+wordnetwork <- head(cooc, 30)
+wordnetwork <- graph_from_data_frame(wordnetwork)
+ggraph(wordnetwork, layout = "fr") +
+  geom_edge_link(aes(width = cooc, edge_alpha = cooc), edge_colour = "pink") +
+  geom_node_text(aes(label = name), col = "darkgreen", size = 4) +
+  theme_graph(base_family = "Arial Narrow") +
+  theme(legend.position = "none") +
+  labs(title = "Cooccurrences within sentence", subtitle = "Nouns & Adjective")
+```
+
+
+```{r}
+# plot twilight coocurrences of nouns and adjs within sentences
+cooc <- cooccurrence(x = subset(annotation2, pos %in% c("NOUN", "ADJ")), 
+                     term = "lemma", 
+                     group = c("doc_id", "sentence_id"))
+
+wordnetwork <- head(cooc, 30)
+wordnetwork <- graph_from_data_frame(wordnetwork)
+ggraph(wordnetwork, layout = "fr") +
+  geom_edge_link(aes(width = cooc, edge_alpha = cooc), edge_colour = "pink") +
+  geom_node_text(aes(label = name), col = "darkgreen", size = 4) +
+  theme_graph(base_family = "Arial Narrow") +
+  theme(legend.position = "none") +
+  labs(title = "Cooccurrences within sentence", subtitle = "Nouns & Adjective")
+```
+
+```{r}
+# plot hunger games coocurrences of nouns and adjs within sentences
+cooc <- cooccurrence(x = subset(annotation3, pos %in% c("NOUN", "ADJ")), 
+                     term = "lemma", 
+                     group = c("doc_id", "sentence_id"))
+
+wordnetwork <- head(cooc, 30)
+wordnetwork <- graph_from_data_frame(wordnetwork)
+ggraph(wordnetwork, layout = "fr") +
+  geom_edge_link(aes(width = cooc, edge_alpha = cooc), edge_colour = "pink") +
+  geom_node_text(aes(label = name), col = "darkgreen", size = 4) +
+  theme_graph(base_family = "Arial Narrow") +
+  theme(legend.position = "none") +
+  labs(title = "Cooccurrences within sentence", subtitle = "Nouns & Adjective")
+```
+
+
+
+
+
+```{r}
+hp_v_twi <- keyness_table(ya_dfm1, ya_dfm2) %>%
+  separate(col = Token, into = c("Token", "Tag"), sep = "_") %>%
+  filter(Tag == "jj")
+
+hp_v_hun <-keyness_table(ya_dfm1, ya_dfm3) %>%
+  separate(col = Token, into = c("Token", "Tag"), sep = "_") %>%
+  filter(Tag == "jj")
+
+hp_tbl <- hp_v_twi %>%
+  slice_max(LL, n=100) %>%
+  select(Token, LL, LR)
+
+twi_tbl <- hp_v_twi %>%
+  slice_min(LL, n=100) %>%
+  select(Token, LL, LR) %>%
+  mutate_if(is.numeric, abs)
+
+hun_tbl <-hp_v_hun %>%
+  slice_min(LL, n=100) %>%
+  select(Token, LL, LR) %>%
+  mutate_if(is.numeric, abs)
+```
+
+
+```{r}
+# comparison of use of adjs between 3 young adult books
+knitr::kable(
+  list(hp_tbl, twi_tbl, hun_tbl),
+  caption = 'A keyness comparision of adjectives in the Harry Potter, the Twilight and the Hunger games novels.',
+  booktabs = TRUE, valign = 't', digits = 2
+) %>%
+  kableExtra::kable_styling(latex_options = "HOLD_position")
+```
+
+
+```{r}
+hp_v_twi <- keyness_table(ya_dfm1, ya_dfm2) %>%
+  separate(col = Token, into = c("Token", "Tag"), sep = "_") %>%
+  filter(Tag == "prp")
+
+hp_v_hun <-keyness_table(ya_dfm1, ya_dfm3) %>%
+  separate(col = Token, into = c("Token", "Tag"), sep = "_") %>%
+  filter(Tag == "prp")
+
+hp_tbl <- hp_v_twi %>%
+  slice_max(LL, n=25) %>%
+  select(Token, LL, LR)
+
+twi_tbl <- hp_v_twi %>%
+  slice_min(LL, n=25) %>%
+  select(Token, LL, LR) %>%
+  mutate_if(is.numeric, abs)
+
+hun_tbl <-hp_v_hun %>%
+  slice_min(LL, n=25) %>%
+  select(Token, LL, LR) %>%
+  mutate_if(is.numeric, abs)
+```
+
+
+```{r}
+# comparison of use of pronouns between 3 ya books
+knitr::kable(
+  list(hp_tbl, twi_tbl, hun_tbl),
+  caption = 'A keyness comparision of pronouns in the Harry Potter, the Twilight and the Hunger games novels.',
+  booktabs = TRUE, valign = 't', digits = 2
+) %>%
+  kableExtra::kable_styling(latex_options = "HOLD_position")
+```
+
+
+```{r}
+hp_v_twi <- keyness_table(ya_dfm1, ya_dfm2) %>%
+  separate(col = Token, into = c("Token", "Tag"), sep = "_") %>%
+  filter(Tag == "rb")
+
+hp_v_hun <-keyness_table(ya_dfm1, ya_dfm3) %>%
+  separate(col = Token, into = c("Token", "Tag"), sep = "_") %>%
+  filter(Tag == "rb")
+
+hp_tbl <- hp_v_twi %>%
+  slice_max(LL, n=25) %>%
+  select(Token, LL, LR)
+
+twi_tbl <- hp_v_twi %>%
+  slice_min(LL, n=25) %>%
+  select(Token, LL, LR) %>%
+  mutate_if(is.numeric, abs)
+
+hun_tbl <-hp_v_hun %>%
+  slice_min(LL, n=25) %>%
+  select(Token, LL, LR) %>%
+  mutate_if(is.numeric, abs)
+```
+
+
+```{r}
+# comparison between use of adverbs 
+knitr::kable(
+  list(hp_tbl, twi_tbl, hun_tbl),
+  caption = 'A keyness comparision of adverbs in the Harry Potter, the Twilight and the Hunger games novels.',
+  booktabs = TRUE, valign = 't', digits = 2
+) %>%
+  kableExtra::kable_styling(latex_options = "HOLD_position")
+```
+
+
+## cluster
+
+```{r}
+# read data for cluster
+ya_paths <- list.files("/Users/zhaoxiangman/Desktop/ya_corpus",
+                         full.names = T, pattern = "*.txt")
+paths_sub <- ya_paths[str_detect(ya_paths, "Rowling|Meyer|Collins")]
+
+```
+
+```{r}
+sub_df <- readtext::readtext(paths_sub) %>%
+mutate(text = str_squish(text))
+```
+
+```{r}
+gatsby <- pdftools::pdf_text("/Users/zhaoxiangman/Desktop/the-great-gatsby.pdf") %>%
+  paste(sep = " ") %>%
+  stringr::str_replace_all(fixed("\n"), " ") %>%
+  stringr::str_replace_all(fixed("\r"), " ") %>%
+  stringr::str_replace_all(fixed("\t"), " ") %>%
+  stringr::str_replace_all(fixed("\""), " ") %>%
+  paste(sep = " ", collapse = " ") %>%
+  stringr::str_squish() %>%
+  stringr::str_replace_all("- ", "") 
+```
+
+```{r}
+jane <- pdftools::pdf_text("/Users/zhaoxiangman/Desktop/jane-eyre.pdf") %>%
+  paste(sep = " ") %>%
+  stringr::str_replace_all(fixed("\n"), " ") %>%
+  stringr::str_replace_all(fixed("\r"), " ") %>%
+  stringr::str_replace_all(fixed("\t"), " ") %>%
+  stringr::str_replace_all(fixed("\""), " ") %>%
+  paste(sep = " ", collapse = " ") %>%
+  stringr::str_squish() %>%
+  stringr::str_replace_all("- ", "") 
+```
+
+```{r}
+pride <- pdftools::pdf_text("/Users/zhaoxiangman/Desktop/pride-and-prejudice.pdf") %>%
+  paste(sep = " ") %>%
+  stringr::str_replace_all(fixed("\n"), " ") %>%
+  stringr::str_replace_all(fixed("\r"), " ") %>%
+  stringr::str_replace_all(fixed("\t"), " ") %>%
+  stringr::str_replace_all(fixed("\""), " ") %>%
+  paste(sep = " ", collapse = " ") %>%
+  stringr::str_squish() %>%
+  stringr::str_replace_all("- ", "") 
+```
+
+
+```{r}
+gatsby_df <- data.frame(doc_id = "gatsby", text = gatsby)
+gatsby_df %>% mutate(text = str_squish(text))
+jane_df <- data.frame(doc_id = "jane", text = jane) %>% mutate(text = str_squish(text))
+pride_df <- data.frame(doc_id = "pride", text = pride) %>% mutate(text = str_squish(text))
+total <- rbind(gatsby_df, sub_df)
+total <- rbind(total, jane_df)
+total <- rbind(total, pride_df)
+```
+
+
+```{r}
+# parse the data using udpipe
+ud_model <- udpipe_load_model("english-ewt-ud-2.5-191206.udpipe")
+annotation <- udpipe_annotate(ud_model, x = total$text, doc_id = total$doc_id,
+parser = "none")
+```
+
+```{r}
+# ombine our upos and xpos columns.
+anno_edit <- annotation %>%
+as_tibble() %>%
+unite("upos", upos:xpos)
+```
+
+
+```{r}
+# Next we create a named list from the new, concatenated column.
+sub_tokens <- split(anno_edit$upos, anno_edit$doc_id)
+```
+
+```{r}
+sub_tokens$Collins_CatchingFire.txt[1:10]
+```
+
+```{r}
+#Now, we’ll use that as our tokens object and filter out a few of the tokens to simplify our feature matrix.
+sub_tokens <- as.tokens(sub_tokens)
+sub_tokens <- tokens_remove(sub_tokens, "^punct_\\S+", valuetype = "regex")
+sub_tokens <- tokens_remove(sub_tokens, "^sym_\\S+", valuetype = "regex")
+sub_tokens <- tokens_remove(sub_tokens, "^x_\\S+", valuetype = "regex")
+```
+
+```{r}
+# We’ll weight the raw counts, and convert the result to a data frame.
+sub_dfm <- sub_tokens %>%
+dfm() %>%
+dfm_weight(scheme = "prop") %>%
+convert(to = "data.frame")
+```
+
+```{r}
+# Finally, we’re going to convert the first row (doc_id) into row names. And, for convenience, we’ll order our columns alphabetically.
+sub_dfm <- sub_dfm %>%
+column_to_rownames("doc_id") %>%
+dplyr::select(order(colnames(.)))
+```
+
+
+```{r}
+#As we did with factor analysis, we’ll scale our variables. Scaling the variables transforms them such that they have a mean of roughly zero, and a standard deviation of 1. 
+sub_dfm <- sub_dfm %>%
+scale() %>%
+data.frame()
+```
+
+```{r}
+round(mean(sub_dfm$noun_nn), 5)
+#> [1] 0
+sd(sub_dfm$noun_nn)
+#> [1] 1
+```
+
+```{r}
+# We’ll start with euclidean distance.
+d <- dist(sub_dfm, method = "euclidean")
+```
+
+
+```{r}
+# We’ll carry out the hierarchical clustering using Ward.
+hc <- hclust(d, method = "ward.D2")
+```
+
+
+```{r}
+# And plot the result.
+plot(hc, cex = 0.6, hang = -1, main = "", sub = "", xlab = "")
+```
+
+```{r}
+# Now let’s visualize that matrix.
+library(factoextra)
+d <- get_dist(sub_dfm)
+```
+
+```{r}
+fviz_dist(d, gradient = list(low = "tomato", mid = "white", high = "steelblue"))
+```
+
+```{r}
+# gglomerative Nesting 
+library(cluster)
+hc <- agnes(d, method = "ward")
+```
+
+```{r}
+plot(as.hclust(hc), cex = 0.6, hang = -1, main = "", sub = "", xlab = "")
+```
+
+```{r}
+# retrieve an agglomerative coefficien
+hc$ac
+```
+
+```{r}
+# we can see how the structure changes with different linkage methods, First, we can create a vector and a simple function.
+m <- c("average", "single", "complete", "ward")
+names(m) <- c("average", "single", "complete", "ward")
+```
+
+```{r}
+ac <- function(x) {
+agnes(d, method = x)$ac
+}
+```
+
+
+```{r}
+# We can also “cut” our dendrogram in any number of clusters. The question is: How many clusters are optimal.Here, we can use some plotting functions that are part of the factoextra package. The first is the familiar “elbow” method.
+fviz_nbclust(sub_dfm, FUN = hcut, method = "wss")
+```
+
+```{r}
+fviz_nbclust(sub_dfm, FUN = hcut, method = "silhouette")
+```
+
+```{r}
+plot(as.hclust(hc), cex = 0.6, hang = -1, main = "", sub = "", xlab = "")
+rect.hclust(hc, k = 4)
+```
+
+```{r}
+# We’ve already determined that our data is best divided into 4 clusters. So we specify “centers” to be 4
+km <- kmeans(sub_dfm, centers = 4, nstart = 25)
+```
+
+```{r}
+km$withinss
+```
+
+```{r}
+km$betweenss
+```
+
+```{r}
+fviz_cluster(km, data = sub_dfm)
+```
+
+
+```{r}
+# Dimension reduction for plotting k-means is typically done using PCA. So lets start there.
+km_pca <- prcomp(sub_dfm)
+```
+
+
+```{r}
+# We can also extract the coordinates for the 4 principal components and create a data frame. We’ll also add columns for discipline and cluster membership.
+coord_df <- data.frame(km_pca$x[, 1:4]) %>%
+mutate(Discipline = str_extract(rownames(sub_dfm), "^[A-Z]+")) %>%
+mutate(Cluster = as.factor(paste0("Cluster ", km$cluster)))
+```
+
+```{r}
+ggplot(coord_df) + geom_vline(xintercept = 0) + geom_hline(yintercept = 0) +
+geom_point(aes(x = PC1, y = PC2, fill = Discipline), size = 1, shape = 21,
+           alpha = 0.75) + viridis::scale_fill_viridis(discrete = T, direction = -1) +
+xlab(paste0("Dimension 1")) + ylab("Dimension 2") + theme_linedraw() +
+theme(panel.grid.major.x = element_blank()) + theme(panel.grid.minor.x = element_blank()) +
+theme(panel.grid.major.y = element_blank()) + theme(panel.grid.minor.y = element_blank()) +
+theme(legend.position = "top") + facet_grid(~Cluster)
+```
+
+```{r}
+fviz_pca_biplot(km_pca, repel = TRUE,
+select.var = list(contrib=10),
+col.var = "red", # Variables color
+col.ind = "#696969" # Individuals color
+)
+```
+
+
+```{r}
+# First, we can use get_pca_var() from the factoextra package to extract the loadings.
+km_pca_var <- get_pca_var(km_pca)
+```
+
+
+```{r}
+# To verify this, we can check to see if the relevant vectors are equal:
+all.equal(km_pca_var$cos2[, 1] * 100/sum(km_pca_var$cos2[, 1]), km_pca_var$contrib[,
+1])
+```
+
+```{r}
+knitr::kable(km_pca_var$contrib[,1] %>% sort(decreasing = T), digits = 2, col.names = "PC1 % Contribution", caption = "Contributions to PC1")
+```
+
