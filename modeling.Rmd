@@ -1,0 +1,694 @@
+---
+title: "Research question 2"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(cmu.textstat)
+library(tidyverse)
+library(quanteda)
+library(quanteda.textstats)
+library(udpipe)
+library(future.apply)
+library(pdftools)
+library(dplyr)
+library(stringr)
+```
+
+```{r more_libraries, message = FALSE, error=FALSE, warning=FALSE}
+library(udpipe)
+library(future.apply)
+udpipe_download_model(language = "english-ewt")
+```
+
+```{r}
+files_list <- list.files("/Users/zhaoxiangman/Desktop/ya_corpus",
+                         full.names = T, pattern = "*.txt")
+
+files_list_Rowling <- files_list[str_detect(files_list, "Rowling")]
+files_list_Meyer <- files_list[str_detect(files_list, "Meyer")]
+files_list_Roth <- files_list[str_detect(files_list, "Roth")]
+files_list_Collins <- files_list[str_detect(files_list, "Collins")]
+```
+
+
+
+
+```{r}
+set.seed(123)
+ya_rowling <- readtext::readtext(files_list_Rowling)
+ya_split_rowling <- split(ya_rowling, seq(1, nrow(ya_rowling), by = 2))
+ya_meyer <- readtext::readtext(files_list_Meyer)
+ya_split_meyer <- split(ya_meyer, seq(1, nrow(ya_meyer), by = 2))
+
+ya_collins <- readtext::readtext(files_list_Collins)
+ya_split_collins <- split(ya_collins, seq(1, nrow(ya_collins), by = 2))
+
+```
+
+```{r}
+gatsby <- pdftools::pdf_text("/Users/zhaoxiangman/Desktop/the-great-gatsby.pdf") %>%
+  paste(sep = " ") %>%
+  stringr::str_replace_all(fixed("\n"), " ") %>%
+  stringr::str_replace_all(fixed("\r"), " ") %>%
+  stringr::str_replace_all(fixed("\t"), " ") %>%
+  stringr::str_replace_all(fixed("\""), " ") %>%
+  paste(sep = " ", collapse = " ") %>%
+  stringr::str_squish() %>%
+  stringr::str_replace_all("- ", "") 
+```
+
+
+```{r}
+jane <- pdftools::pdf_text("/Users/zhaoxiangman/Desktop/jane-eyre.pdf") %>%
+  paste(sep = " ") %>%
+  stringr::str_replace_all(fixed("\n"), " ") %>%
+  stringr::str_replace_all(fixed("\r"), " ") %>%
+  stringr::str_replace_all(fixed("\t"), " ") %>%
+  stringr::str_replace_all(fixed("\""), " ") %>%
+  paste(sep = " ", collapse = " ") %>%
+  stringr::str_squish() %>%
+  stringr::str_replace_all("- ", "") 
+```
+
+```{r}
+pride <- pdftools::pdf_text("/Users/zhaoxiangman/Desktop/pride-and-prejudice.pdf") %>%
+  paste(sep = " ") %>%
+  stringr::str_replace_all(fixed("\n"), " ") %>%
+  stringr::str_replace_all(fixed("\r"), " ") %>%
+  stringr::str_replace_all(fixed("\t"), " ") %>%
+  stringr::str_replace_all(fixed("\""), " ") %>%
+  paste(sep = " ", collapse = " ") %>%
+  stringr::str_squish() %>%
+  stringr::str_replace_all("- ", "") 
+```
+
+
+```{r}
+# find the frequency of body parts words in harry potter
+rowling <- corpus(ya_rowling)
+tokens(rowling) %>%
+  tokens_select(c("eye", "hand", "eyes", "face", "lips", "head", "skin", "hair", "arm", "legs", "feet")) %>%
+  dfm()
+```
+
+```{r}
+# find the number of body part words in twilight
+meyer <- corpus(ya_meyer)
+tokens(meyer) %>%
+  tokens_select(c("eye", "hand", "eyes", "face", "lips", "head", "skin", "hair", "arm", "legs", "feet")) %>%
+  dfm()
+```
+
+```{r}
+# find the number of body parts words in hunger games
+collins <- corpus(ya_collins)
+tokens(collins) %>%
+  tokens_select(c("eye", "hand", "eyes", "face", "lips", "head", "skin", "hair", "arm", "leg", "feet")) %>%
+  dfm()
+```
+
+```{r}
+# the number of body parts words in gatsby
+gatsby_corpus <- corpus(gatsby)
+tokens(gatsby_corpus) %>%
+  tokens_select(c("eye", "hand", "eyes", "face", "lips", "head", "skin", "hair", "arm", "legs", "feet")) %>%
+  dfm()
+```
+
+```{r}
+# the number of body parts words in jane eyre
+jane_corpus <- corpus(jane)
+tokens(jane_corpus) %>%
+ tokens_select(c("eye", "hand", "eyes", "face", "lips", "head", "skin", "hair", "arm", "legs", "feet")) %>%
+  dfm()
+```
+
+
+```{r}
+# number of body parts wors in pride and prejudice
+pride_corpus <- corpus(pride)
+tokens(pride_corpus) %>%
+  tokens_select(c("eye", "hand", "eyes", "face", "lips", "head", "skin", "hair", "arm", "legs", "feet")) %>%
+  dfm()
+```
+
+```{r}
+# calculate the frequency of body parts in harry potter
+r_eye <- 1567/917074 * 1000000
+r_hand <- 907/917074 * 1000000
+r_hair <- 437/917074 * 1000000
+r_arm <- 280/917074 * 1000000
+r_face <- 1258/917074 * 1000000
+r_head <- 1110/917074 * 1000000
+r_skin <- 80/917074 * 1000000
+r_lips <- 71/917074 * 1000000
+r_legs <- 178/917074 * 1000000
+r_feet <- 625/917074 * 1000000
+```
+
+```{r}
+# frequency of body parts in twilight
+m_eye <- 2020/610537 * 1000000
+m_hand <- 892/610537 * 1000000
+m_hair <- 346/610537 * 1000000
+m_arm <- 294/610537 * 1000000
+m_face <- 1571/610537 * 1000000
+m_head <- 990/610537 * 1000000
+m_skin <- 316/610537 * 1000000
+m_lips <- 372/610537 * 1000000
+m_legs <- 75/610537 * 1000000
+m_feet <- 275/610537 * 1000000
+```
+
+
+```{r}
+# freqyebct of  body parts in hunger games
+c_eye <- 408/314022 * 1000000
+c_hand <- 296/314022 * 1000000
+c_hair <- 177/314022 * 1000000
+c_arm <- 88/314022 * 1000000
+c_face <- 334/314022 * 1000000
+c_head <- 369/314022 * 1000000
+c_skin <- 109/314022 * 1000000
+c_lips <- 105/314022 * 1000000
+c_legs <- 81/314022 * 1000000
+c_feet <- 170/314022 * 1000000
+```
+
+
+```{r}
+# frequency of body parts in gatsby
+g_eye <- 91/50755 * 1000000
+g_hand <- 63/50755 * 1000000
+g_hair <- 22/50755 * 1000000
+g_arm <- 14/50755 * 1000000
+g_face <- 55/50755 * 1000000
+g_head <- 40/50755 * 1000000
+g_skin <- 3/50755 * 1000000
+g_lips <- 11/50755 * 1000000
+g_legs <- 2/50755 * 1000000
+g_feet <- 23/50755 * 1000000
+```
+
+
+```{r}
+# frequency of body parts in jane eyre
+j_eye <- 300/191465 * 1000000
+j_hand <- 183/191465 * 1000000
+j_hair <- 65/191465 * 1000000
+j_arm <- 37/191465 * 1000000
+j_face <- 192/191465 * 1000000
+j_head <- 129/191465 * 1000000
+j_skin <- 9/191465 * 1000000
+j_lips <- 62/191465 * 1000000
+j_legs <- 0/191465 * 1000000
+j_feet <- 41/191465 * 1000000
+```
+
+
+```{r}
+# frequency of body parts in pride and prejudice
+p_eye <- 67/124832 * 1000000
+p_hand <- 24/124832 * 1000000
+p_hair <- 3/124832 * 1000000
+p_arm <- 2/124832 * 1000000
+p_face <- 27/124832 * 1000000
+p_head <- 32/124832 * 1000000
+p_skin <- 9/124832 * 1000000
+p_lips <- 9/124832 * 1000000
+p_legs <- 0/124832 * 1000000
+p_feet <- 1/124832 * 1000000
+```
+
+```{r}
+# bar plots
+book <- c(rep("Harry Porter", 10), rep("Twilight", 10), rep("The Hunger Games", 10), rep("The Great Gatsby", 10), rep("Jane Eyre", 10), rep("Pride and Prejudice", 10))
+data <- c(r_eye, r_hand, r_hair,r_arm, r_face, r_head, r_skin, r_lips, r_legs, r_feet, m_eye, m_hand, m_hair, m_arm, m_face, m_head, m_skin, m_lips, m_legs, m_feet, c_eye, c_hand, c_hair,c_arm, c_face, c_head, c_skin, c_lips, c_legs, c_feet, g_eye, g_hand, g_hair,g_arm, g_face, g_head, g_skin, g_lips, g_legs, g_feet, j_eye, j_hand, j_hair,j_arm, j_face, j_head, j_skin, j_lips, j_legs, j_feet, p_eye, p_hand, p_hair,p_arm, p_face, p_head, p_skin, p_lips, p_legs, p_feet)
+body <- c(rep(c("eye", "hand", "hair", "arm", "face", "head", "skin", "lips", "legs", "feet"), 6))
+table1 <- data.frame(book, data, body)
+table1
+```
+
+```{r}
+# bar plots
+ggplot(table1, aes(x=body, y=data, fill=book)) +
+    geom_bar(stat='identity', position='dodge', alpha = 0.7)+ theme_classic() + ylab("frequency per million words")+ggtitle("Frequency in the use of body parts")
+```
+
+```{r}
+# body parts in young adult 
+YA_eye <- (r_eye + m_eye + c_eye)/3
+YA_arm <- (r_arm + m_arm + c_arm)/3
+YA_face <- (r_face + m_face + c_face)/3
+YA_feet <- (r_feet + m_feet + c_feet)/3
+YA_hair <- (r_hair + m_hair + c_hair)/3
+YA_hand <- (r_hand + m_hand + c_hand)/3
+YA_head <- (r_head + m_head + c_head)/3
+YA_legs <- (r_legs + m_legs + c_legs)/3
+YA_lips <- (r_lips + m_lips + c_lips)/3
+YA_skin <- (r_skin + m_skin + c_skin)/3
+```
+
+
+```{r}
+# body parts in adult
+A_eye <- (g_eye + j_eye + p_eye)/3
+A_arm <- (g_arm + j_arm + p_arm)/3
+A_face <- (g_face + j_face + p_face)/3
+A_feet <- (g_feet + j_feet + p_feet)/3
+A_hair <- (g_hair + j_hair + p_hair)/3
+A_hand <- (g_hand + j_hand + p_hand)/3
+A_head <- (g_head + j_head + p_head)/3
+A_legs <- (g_legs + j_legs + p_legs)/3
+A_lips <- (g_lips + j_lips + p_lips)/3
+A_skin <- (g_skin + j_skin + p_skin)/3
+```
+
+
+```{r}
+# bar plot
+type <-c(rep("Young Adult", 10), rep("Adult", 10))
+data <- c(YA_eye, YA_hand, YA_hair, YA_arm, YA_face, YA_head, YA_skin, YA_lips, YA_legs, YA_feet, A_eye, A_hand, A_hair, A_arm, A_face, A_head, A_skin, A_lips, A_legs, A_feet)
+body <- c(rep(c("eye", "hand", "hair", "arm", "face", "head", "skin", "lips", "legs", "feet"), 2))
+table2 <- data.frame(type, data, body)
+ggplot(table2, aes(x=body, y=data, fill=type)) +
+    geom_bar(stat='identity', position='dodge', alpha = 0.7)+ theme_classic() + ylab("frequency per million words")
+```
+
+```{r}
+ya <- readtext::readtext(files_list)
+files_list2 <- list.files("/Users/zhaoxiangman/Desktop/Adult",
+                         full.names = T, pattern = "*.pdf")
+
+```
+
+```{r}
+filestext <- lapply(files_list2, pdftools::pdf_text)
+pdftext <- filestext %>%  paste(sep = " ") %>%
+  stringr::str_replace_all(fixed("\n"), " ") %>%
+  stringr::str_replace_all(fixed("\r"), " ") %>%
+  stringr::str_replace_all(fixed("\t"), " ") %>%
+  stringr::str_replace_all(fixed("\""), " ") %>%
+  paste(sep = " ", collapse = " ") %>%
+  stringr::str_squish() %>%
+  stringr::str_replace_all("- ", "") 
+```
+
+```{r}
+adult_corpus <- corpus(pdftext)
+ya_corpus <- corpus(ya)
+```
+
+```{r}
+# build adult corpus and young adult corpus
+adult_token <- tokens(adult_corpus, what = "fastestword")
+ya_token <- tokens(ya_corpus, what = "fastestword")
+```
+
+```{r}
+# time words number in adult corpus
+tokens(adult_corpus) %>%
+ tokens_select(c("now", "late", "later", "before", "after", "during", "soon", "last", "often", "never")) %>%
+  dfm()
+```
+
+```{r}
+# harry potter time words 
+tokens(rowling) %>%
+ tokens_select(c("now", "late", "later", "before", "after", "during", "soon", "often", "never", "last")) %>%
+  dfm()
+```
+
+```{r}
+# twilight time words number
+tokens(meyer) %>%
+ tokens_select(c("now", "late", "later", "before", "after", "during", "soon", "last", "often", "never")) %>%
+  dfm()
+```
+
+```{r}
+# hunger games time words number
+tokens(collins) %>%
+ tokens_select(c("now", "late", "later", "before", "after", "during", "soon", "last", "often", "never")) %>%
+  dfm()
+```
+
+
+```{r}
+# frequency of time words in adult
+adult_last <- 319/367052 * 1000000
+adult_often <- 150/367052 * 1000000
+adult_never <- 567/367052 * 1000000
+adult_before <- 533/367052 * 1000000
+adult_now <- 914/367052 * 1000000
+adult_soon <- 356/367052 * 1000000
+adult_later <- 30/367052 * 1000000
+adult_late <- 66/367052 * 1000000
+adult_during <- 67/367052 * 1000000
+```
+
+```{r}
+# frequency of time words in young adult
+ya_last <- 1970/1841633 * 1000000
+ya_often <- 174/1841633 * 1000000
+ya_never <- 1970/1841633 * 1000000
+ya_before <- 2622/1841633 * 1000000
+ya_now <- 4326/1841633 * 1000000
+ya_soon <- 531/1841633 * 1000000
+ya_later <- 519/1841633 * 1000000
+ya_late <- 338/1841633 * 1000000
+ya_during <- 271/1841633 * 1000000
+```
+
+```{r}
+# bar plot 
+type <-c(rep("Young Adult", 9), rep("Adult", 9))
+data <- c(ya_last, ya_often, ya_never, ya_before, ya_now, ya_soon, ya_later, ya_late, ya_during, adult_last, adult_often, adult_never, adult_before, adult_now, adult_soon, adult_later, adult_late, adult_during)
+time <- c(rep(c("last", "often", "never", "before", "now", "soon", "later", "late", "during"), 2))
+table3 <- data.frame(type, data, time)
+ggplot(table3, aes(x=time, y=data, fill=type)) +
+    geom_bar(stat='identity', position='dodge', alpha = 0.7)+ theme_classic() + ylab("frequency per million words")
+```
+
+```{r}
+# modal verbs in adult
+tokens(adult_corpus) %>%
+ tokens_select(c("shall", "should", "could", "can", "ought", "must", "will", "would", "may")) %>%
+  dfm()
+```
+
+```{r}
+# modal verbs in harry potter
+tokens(rowling) %>%
+ tokens_select(c("shall", "should", "could", "can", "ought", "must", "will", "would", "may")) %>%
+  dfm()
+```
+
+
+```{r}
+# modal verbs in twilight
+tokens(meyer) %>%
+ tokens_select(c("shall", "should", "could", "can", "ought", "must", "will", "would", "may")) %>%
+  dfm()
+```
+
+
+
+```{r}
+# modal verbs in hunger games
+tokens(collins) %>%
+ tokens_select(c("shall", "should", "could", "can", "ought", "must", "will", "would", "may")) %>%
+  dfm()
+```
+
+```{r}
+# adult frequency of modal verbs
+adult_shall <- 394/367052 * 1000000
+adult_must <- 615/367052 * 1000000
+adult_should <- 501/367052 * 1000000
+adult_would <- 1073/367052 * 1000000
+adult_may <- 322/367052 * 1000000
+adult_will <- 993/367052 * 1000000
+adult_could <- 1025/367052 * 1000000
+adult_can <- 438/367052 * 1000000
+adult_ought <- 394/367052 * 1000000
+```
+
+```{r}
+# young adult frequency of modal verbs
+ya_shall <- 205/1841633 * 1000000
+ya_must <- 1091/1841633 * 1000000
+ya_should <- 1017/1841633 * 1000000
+ya_would <- 4685/1841633 * 1000000
+ya_may <- 297/1841633 * 1000000
+ya_will <- 2494/1841633 * 1000000
+ya_could <- 6920/1841633 * 1000000
+ya_can <- 3048/1841633 * 1000000
+ya_ought <- 156/1841633 * 1000000
+```
+
+```{r}
+# bar plot
+type <-c(rep("Young Adult", 9), rep("Adult", 9))
+data <- c(ya_shall, ya_must, ya_should, ya_would, ya_may, ya_will, ya_could, ya_can, ya_ought, adult_shall, adult_must, adult_should, adult_would, adult_may, adult_will, adult_could, adult_can, adult_ought)
+modals <- c(rep(c("shall", "must", "should", "would", "may", "will", "could", "can", "ought"), 2))
+table3 <- data.frame(type, data, modals)
+ggplot(table3, aes(x=modals, y=data, fill=type)) +
+    geom_bar(stat='identity', position='dodge', alpha = 0.7)+ theme_classic() + ylab("frequency per million words")
+```
+
+
+
+# models
+
+```{r}
+ya1 <-list.files("/Users/zhaoxiangman/Desktop/ya",
+                         full.names = T, pattern = "*.txt")
+a <- list.files("/Users/zhaoxiangman/Desktop/ya",
+                         full.names = T, pattern = "*.pdf")
+```
+
+```{r}
+a1 <- readtext::readtext(a)
+a1
+```
+
+```{r}
+ya1 <- readtext::readtext(ya1)
+```
+
+```{r}
+# merge ya books and adult books together for modeling
+merge <- rbind(a1, ya1)
+```
+
+
+```{r}
+ya_tokens <- ya1 %>%
+corpus() %>%
+tokens(remove_punct = T, remove_symbols = T, what = "word")
+```
+
+```{r}
+a_tokens <- a1%>%
+corpus() %>%
+tokens(remove_punct = T, remove_symbols = T, what = "word")
+```
+
+```{r}
+ya_tokens1 <- tokens_tolower(ya_tokens)
+```
+
+```{r}
+a_tokens1 <- tokens_tolower(a_tokens)
+```
+
+```{r}
+ya_tokens2 <- tokens_compound(ya_tokens1, pattern = phrase(multiword_expressions))
+a_tokens2 <- tokens_compound(a_tokens1, pattern = phrase(multiword_expressions))
+```
+
+```{r}
+# frequency table for young adult 
+ya_dfm <- dfm(ya_tokens2)
+ya_dfm1 <- dfm_weight(ya_dfm, scheme = "prop")
+freq_df <- textstat_frequency(ya_dfm1) %>%
+data.frame(stringsAsFactors = F)
+freq_df
+```
+
+```{r}
+# frequency for adult 
+a_dfm <- dfm(a_tokens2)
+a_dfm1 <- dfm_weight(a_dfm, scheme = "prop")
+freq_df1 <- textstat_frequency(a_dfm1) %>%
+data.frame(stringsAsFactors = F)
+freq_df1
+```
+
+```{r}
+a_dfm <- dfm_remove(a_dfm, c("ebook.com", "ebooks", "planet"))
+```
+
+
+```{r}
+kw <- keyness_table(a_dfm, ya_dfm)
+```
+
+```{r}
+# keyness table between young adult and adult
+kableExtra::kbl(head(kw), caption = "Tokens with the highest keyness values in adult literature when compared to YA literature.", booktabs = T, linesep = "", digits = 2) %>%
+  kableExtra::kable_styling(latex_options = "HOLD_position") %>%
+  kableExtra::kable_classic()
+```
+
+
+```{r}
+# frequency and dispersion table for young adult table
+d <- dispersions_all(ya_dfm1)
+ft <- frequency_table(ya_tokens1)
+knitr::kable(head(ft), digits = 3, caption = "Frequency and dispersion measures for all tokens.", "simple")
+```
+
+```{r}
+# frequency and dispersion table for adult table
+d1 <- dispersions_all(a_dfm1)
+ft1 <- frequency_table(a_tokens2)
+knitr::kable(head(ft1), digits = 3, caption = "Frequency and dispersion measures for all tokens.", "simple")
+```
+
+
+```{r}
+merge_tokens <- merge %>%
+corpus() %>%
+tokens(remove_punct = T, remove_symbols = T, what = "word")
+```
+
+
+```{r}
+# And create a weighted dfm
+merge_dfm <- merge_tokens %>%
+dfm() %>%
+dfm_weight(scheme = "prop") %>%
+convert(to = "data.frame") %>%
+mutate(doc_id = str_remove(doc_id, ".pdf$")) %>%
+select(doc_id, names(sort(colMeans(.[, -1]), decreasing = TRUE)))
+```
+
+
+
+```{r}
+# add a column specifying type 
+merge_dfm
+type = c(rep("adult", 29), rep("ya", 51))
+merge_dfm$a_type = type
+```
+
+```{r}
+merge_dfm <- merge_dfm %>% 
+  dplyr::select(doc_id, a_type, everything()) %>% 
+  as_tibble()
+```
+
+
+
+```{r}
+# Now we can subset out our training and testing data.
+train_dfm <- merge_dfm %>%
+filter(!grepl('test', doc_id))
+test_dfm <- merge_dfm %>% filter(grepl('test', doc_id))
+```
+
+```{r}
+# or this, we’ll use some handy functions from the rsample package. First, we make an 80/20 split. From that we create a new, smaller training set, and a validation set.
+library(rsample)
+set.seed(123)
+valid_split <- initial_split(train_dfm, 0.8)
+train_dfm_v2 <- analysis(valid_split)
+train_valid <- assessment(valid_split)
+```
+
+```{r}
+# use the time words, modal verb and body parts words above
+group4 <- c("now", "late", "later", "before", "after", "during", "soon", "last", "often", "never", "eye", "hand", "hair", "arm", "face", "head", "skin", "lips", "legs", "feet", "blood","shall", "should", "could", "can", "ought", "must", "will", "would", "may")
+
+```
+
+```{r}
+library(glmnet)
+```
+
+## group 4
+
+```{r}
+# e also need to convert the doc_id into a 2-level factor, and to move the text_id to row names. The same for the validation data, but we don’t need to worry about the factor conversion
+train_dfm_v2_1 <- train_dfm_v2 %>%
+dplyr::select(doc_id, a_type, all_of(group4)) %>%
+mutate(doc_id = factor(doc_id)) %>%
+column_to_rownames("doc_id")
+
+train_valid_1 <- train_valid %>%
+dplyr::select(doc_id, a_type, all_of(group4)) %>%
+column_to_rownames("doc_id")
+```
+
+```{r}
+# To help you decide which lambda to use, the cv.glmnet() function does cross-validation. The defaul sets alpha=1 for lasso.
+cv_fit <- cv.glmnet(as.matrix(train_dfm_v2_1[, -1]), train_dfm_v2_1[, 1],
+family = "binomial")
+```
+
+```{r}
+# We can plot the log of the resulting lambdas.
+plot(cv_fit)
+```
+
+
+```{r}
+# We’ll save our regression coefficients.
+lambda_min <- cv_fit$lambda.min
+lambda_lse <- cv_fit$lambda.1se
+```
+
+```{r}
+# By filtering those variables with coefficients of zero, we see only the variables have been included in the model. Ours has 10.
+coef(cv_fit, s = "lambda.min") %>%
+as.matrix() %>%
+data.frame() %>%
+rownames_to_column("Variable") %>%
+filter(s1 != 0) %>%
+dplyr::rename(Coeff = s1) %>%
+knitr::kable(digits = 2)
+```
+
+
+
+
+```{r}
+# To validate the model, let’s create a model matrix from the texts we’ve split off for that purpose
+x_test <- model.matrix(a_type ~ ., train_valid_1)[, -1]
+```
+
+```{r}
+# predicting type of literature
+lasso_prob <- predict(cv_fit, newx = x_test, s = lambda_lse, type = "response")
+```
+
+```{r}
+lasso_predict <- ifelse(lasso_prob > 0.5, "ya", "adult")
+```
+
+```{r}
+# confusion matrix
+table(pred = lasso_predict, true = train_valid_1$a_type) %>%
+knitr::kable()
+```
+
+
+```{r}
+# accuracy of the model 
+paste0(mean(lasso_predict == train_valid_1$a_type) * 100, "%")
+```
+
+\pagebreak
+
+```{r ref.label=knitr::all_labels(), echo = T, eval = F}
+```
+
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
